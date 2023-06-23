@@ -11,31 +11,36 @@ import logoimage from '../../assets/logo.svg';
 export default function Books() {
 
     const [books, setBooks] = useState([]);
+    const [page, setPage] = useState(0);
 
     const userName = localStorage.getItem('userName');
     const accessToken = localStorage.getItem('accessToken');
 
+    const authorization = {
+        headers: {
+            Authorization: `Bearer ${accessToken}`
+        }
+    };
+
     const navigate = useNavigate();
 
     useEffect(() => {
-        api.get('api/Book/v1/asc/20/1', {
-            headers: {
-                Authorization: `Bearer ${accessToken}`
-            }
-        }).then(response => {
-            setBooks(response.data.list)
-        });
+        fetchMoreBooks();
 
         //Monitorando a accessToken abaixo. Sempre que ela mudar o useEffect vai ter que ser chamado de novo para recarregar a lista
     }, [accessToken]);
 
+    async function fetchMoreBooks() {
+        const response = await api.get(`api/Book/v1/asc/4/${page}`, authorization)
+            .then(response => {
+                setBooks([...books, ...response.data.list]);
+                setPage(page + 1);
+            });
+    }
+
     async function deleteBook(id) {
         try {
-            await api.delete(`api/Book/v1/${id}`, {
-                headers: {
-                    Authorization: `Bearer ${accessToken}`
-                }
-            });
+            await api.delete(`api/Book/v1/${id}`, authorization);
 
             setBooks(books.filter(book => book.id != id));
         } catch (error) {
@@ -53,11 +58,7 @@ export default function Books() {
 
     async function logout() {
         try {
-            await api.get('api/auth/v1/revoke', {
-                headers: {
-                    Authorization: `Bearer ${accessToken}`
-                }
-            });
+            await api.get('api/auth/v1/revoke', authorization);
 
             localStorage.clear();
             navigate('/');
@@ -108,6 +109,7 @@ export default function Books() {
                     </li>
                 ))}
             </ul>
+            <button className="button" onClick={fetchMoreBooks} type='button'>Load More</button>
         </div>
     );
 }
